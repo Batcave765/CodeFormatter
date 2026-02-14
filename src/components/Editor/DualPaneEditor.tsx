@@ -9,6 +9,8 @@ interface DualPaneEditorProps {
     onChange: (value: string | undefined) => void;
     options: any; // Monaco options
     error: string | null;
+    onPaste?: () => void;
+    onFormat?: () => void;
 }
 
 export function DualPaneEditor({
@@ -18,11 +20,40 @@ export function DualPaneEditor({
     onChange,
     options,
     error,
+    onPaste,
+    onFormat,
 }: DualPaneEditorProps) {
     const editorRef = useRef<any>(null);
 
     const handleEditorDidMount: OnMount = (editor, monaco) => {
         editorRef.current = editor;
+
+        // Configure diagnostics (ESLint-like checks)
+        monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+            noSemanticValidation: false,
+            noSyntaxValidation: false,
+            diagnosticCodesToIgnore: [], // Can add codes here to ignore
+        });
+
+        // Ensure compiler options are strict enough to show "unused" warnings etc if possible?
+        // Default Monaco TS/JS setup usually shows unused variables as grayed out or warnings.
+        monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+            allowNonTsExtensions: true,
+            target: monaco.languages.typescript.ScriptTarget.ESNext,
+            noUnusedLocals: true, // Show unused locals
+            noUnusedParameters: true, // Show unused params
+        });
+
+        editor.onDidPaste(() => {
+            if (onPaste) onPaste();
+        });
+
+        // Add Command for Ctrl+Enter
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+            if (onFormat) {
+                onFormat();
+            }
+        });
     };
 
     // Map our language IDs to Monaco language IDs
@@ -33,6 +64,7 @@ export function DualPaneEditor({
             case "css": return "css";
             case "json": return "json";
             case "markdown": return "markdown";
+            case "sql": return "sql";
             default: return "plaintext";
         }
     };

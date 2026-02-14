@@ -5,6 +5,7 @@ import * as parserHtml from "prettier/plugins/html";
 import * as parserPostcss from "prettier/plugins/postcss";
 import * as parserMarkdown from "prettier/plugins/markdown";
 import * as parserEstree from "prettier/plugins/estree";
+import { format as formatSql } from "sql-formatter";
 import { LanguageId } from "@/lib/constants";
 
 interface FormatOptions {
@@ -27,8 +28,26 @@ export function useFormatter() {
             }
 
             try {
+                // Handle SQL separately (prettier-plugin-sql exists but sql-formatter is requested/easier here)
+                if (language === "sql") {
+                    try {
+                        const sqlResult = formatSql(code, {
+                            language: "sql",
+                            tabWidth: options.tabWidth,
+                            useTabs: options.useTabs,
+                            keywordCase: "upper",
+                        });
+                        setFormattedCode(sqlResult);
+                    } catch (e: any) {
+                        setError(e.message || "SQL Formatting Error");
+                        console.error(e);
+                    }
+                    return;
+                }
+
+                // Prettier handling
                 let parser = "babel";
-                let plugins = [parserBabel, parserEstree];
+                let plugins: any[] = [parserBabel, parserEstree];
 
                 switch (language) {
                     case "javascript":
@@ -45,7 +64,7 @@ export function useFormatter() {
                         break;
                     case "json":
                         parser = "json";
-                        plugins = [parserBabel, parserEstree]; // Babel parses JSON too
+                        plugins = [parserBabel, parserEstree];
                         break;
                     case "markdown":
                         parser = "markdown";
@@ -64,8 +83,6 @@ export function useFormatter() {
                 setFormattedCode(result);
             } catch (err: any) {
                 setError(err.message || "An error occurred during formatting");
-                // Keep the previous formatted code or maybe clear it? 
-                // Usually better to keep it or just show error.
                 console.error("Formatting error:", err);
             }
         },
