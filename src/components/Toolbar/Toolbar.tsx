@@ -9,6 +9,8 @@ interface ToolbarProps {
     onCopy: () => void;
     onClear: () => void;
     onSettings: () => void;
+    showPreview: boolean;
+    onPreview: () => void;
 }
 
 export function Toolbar({
@@ -18,6 +20,8 @@ export function Toolbar({
     onCopy,
     onClear,
     onSettings,
+    showPreview,
+    onPreview,
 }: ToolbarProps) {
     return (
         <div className="flex items-center justify-between p-4 border-b border-border bg-muted/30">
@@ -33,6 +37,15 @@ export function Toolbar({
                     <Play className="w-4 h-4" />
                     Format
                 </button>
+
+                {language === "markdown" && (
+                    <button
+                        onClick={onPreview}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors border border-border ${showPreview ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+                    >
+                        {showPreview ? "Edit / Code" : "Preview"}
+                    </button>
+                )}
             </div>
 
             <div className="flex items-center gap-2">

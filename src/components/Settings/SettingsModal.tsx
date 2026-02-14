@@ -1,12 +1,5 @@
 import { X } from "lucide-react";
-import { DEFAULT_SETTINGS } from "@/lib/constants";
-
-interface Settings {
-    tabWidth: number;
-    useTabs: boolean;
-    semi: boolean;
-    singleQuote: boolean;
-}
+import { DEFAULT_SETTINGS, Settings } from "@/lib/constants";
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -104,6 +97,17 @@ export function SettingsModal({
                                 Single (')
                             </button>
                         </div>
+                    </div>
+
+                    {/* Format on Paste */}
+                    <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium">Format on Paste</label>
+                        <button
+                            onClick={() => handleChange("formatOnPaste", !settings.formatOnPaste)}
+                            className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent ${settings.formatOnPaste ? "bg-accent" : "bg-muted"}`}
+                        >
+                            <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${settings.formatOnPaste ? "left-6" : "left-1"}`} />
+                        </button>
                     </div>
                 </div>
 
