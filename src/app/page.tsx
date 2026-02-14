@@ -56,12 +56,10 @@ export default function Home() {
   };
 
   const handleClear = () => {
-    if (confirm("Are you sure you want to clear the editor?")) {
-      setCode("");
-      if (mode === "compare") {
-        setSecondaryCode("");
-      }
-    }
+    setCode("");
+    setSecondaryCode("");
+    // Clear formatted code in the right panel by formatting empty string
+    format("", language, settings);
   };
 
   // Drag & Drop
