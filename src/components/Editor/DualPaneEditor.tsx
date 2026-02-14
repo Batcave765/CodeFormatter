@@ -1,6 +1,8 @@
 import Editor, { OnMount } from "@monaco-editor/react";
 import { LanguageId } from "@/lib/constants";
 import { useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface DualPaneEditorProps {
     language: LanguageId;
@@ -11,6 +13,7 @@ interface DualPaneEditorProps {
     error: string | null;
     onPaste?: () => void;
     onFormat?: () => void;
+    showPreview?: boolean;
 }
 
 export function DualPaneEditor({
@@ -22,6 +25,7 @@ export function DualPaneEditor({
     error,
     onPaste,
     onFormat,
+    showPreview,
 }: DualPaneEditorProps) {
     const editorRef = useRef<any>(null);
 
@@ -103,20 +107,29 @@ export function DualPaneEditor({
             {/* Output Pane */}
             <div className={`flex-1 flex flex-col h-1/2 md:h-full relative group ${error ? "bg-red-950/10" : "bg-background/50"}`}>
                 <div className="absolute top-0 right-0 z-10 px-2 py-1 text-xs text-muted-foreground bg-muted/50 rounded-bl-md backdrop-blur-sm pointer-events-none group-hover:opacity-100 opacity-50 transition-opacity">
-                    {error ? "Error Log" : "Output"}
+                    {error ? "Error Log" : showPreview ? "Preview" : "Output"}
                 </div>
-                <Editor
-                    height="100%"
-                    theme="vs-dark"
-                    language={error ? "plaintext" : monacoLanguage}
-                    value={error || formattedCode}
-                    options={{
-                        ...commonOptions,
-                        readOnly: true,
-                        domReadOnly: true,
-                        wordWrap: "on", // Wrap errors
-                    }}
-                />
+
+                {showPreview && language === "markdown" && !error ? (
+                    <div className="h-full w-full overflow-auto p-4 prose prose-invert max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {formattedCode || code}
+                        </ReactMarkdown>
+                    </div>
+                ) : (
+                    <Editor
+                        height="100%"
+                        theme="vs-dark"
+                        language={error ? "plaintext" : monacoLanguage}
+                        value={error || formattedCode}
+                        options={{
+                            ...commonOptions,
+                            readOnly: true,
+                            domReadOnly: true,
+                            wordWrap: "on",
+                        }}
+                    />
+                )}
             </div>
         </div>
     );

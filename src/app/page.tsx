@@ -24,6 +24,7 @@ export default function Home() {
 
   // Local State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Hydration fix
   useEffect(() => {
@@ -107,6 +108,8 @@ export default function Home() {
         onCopy={handleCopy}
         onClear={handleClear}
         onSettings={() => setIsSettingsOpen(true)}
+        showPreview={showPreview}
+        onPreview={() => setShowPreview(!showPreview)}
       />
 
       <main className="flex-1 overflow-hidden relative">
@@ -128,6 +131,7 @@ export default function Home() {
             }
           }}
           onFormat={handleFormat}
+          showPreview={showPreview}
         />
       </main>
 
