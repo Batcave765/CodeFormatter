@@ -8,11 +8,11 @@ interface LanguageSelectorProps {
 
 export function LanguageSelector({ value, onChange }: LanguageSelectorProps) {
     return (
-        <div className="relative">
+        <div className="relative w-full md:w-auto">
             <select
                 value={value}
                 onChange={(e) => onChange(e.target.value as LanguageId)}
-                className="appearance-none h-9 w-40 bg-muted text-sm px-3 py-1 rounded-md border border-border focus:outline-none focus:ring-1 focus:ring-accent cursor-pointer"
+                className="appearance-none h-9 w-full md:w-40 bg-muted text-sm px-3 pr-8 py-1 rounded-md border border-border focus:outline-none focus:ring-1 focus:ring-accent cursor-pointer"
             >
                 {LANGUAGES.map((lang) => (
                     <option key={lang.id} value={lang.id}>

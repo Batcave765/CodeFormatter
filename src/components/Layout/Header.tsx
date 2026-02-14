@@ -7,7 +7,7 @@ export function Header() {
         <Code2 className="w-6 h-6 text-accent" />
         <h1 className="text-xl font-bold tracking-tight">CodeFormatter</h1>
       </div>
-      <div className="text-sm text-muted-foreground">
+      <div className="hidden md:block text-sm text-muted-foreground">
         Multi-Language Formatter
       </div>
     </header>
