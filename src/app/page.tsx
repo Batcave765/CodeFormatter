@@ -17,6 +17,8 @@ export default function Home() {
   // Persisted State
   const [language, setLanguage] = useLocalStorage<LanguageId>("formatter-language", "javascript");
   const [code, setCode] = useLocalStorage<string>("formatter-code", "// Paste your code here\n");
+  const [secondaryCode, setSecondaryCode] = useLocalStorage<string>("formatter-compare-code", "// Paste code to compare\n");
+  const [mode, setMode] = useLocalStorage<import("@/lib/constants").Mode>("formatter-mode", "format");
   const [settings, setSettings] = useLocalStorage("formatter-settings", { ...DEFAULT_SETTINGS, formatOnPaste: false });
 
   // Formatter Hook
@@ -56,6 +58,9 @@ export default function Home() {
   const handleClear = () => {
     if (confirm("Are you sure you want to clear the editor?")) {
       setCode("");
+      if (mode === "compare") {
+        setSecondaryCode("");
+      }
     }
   };
 
@@ -66,6 +71,7 @@ export default function Home() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result as string;
+        // In compare mode, we could potentially drop to secondary, but for now let's just drop to primary
         setCode(content);
         // Auto-detect language extension
         if (file.name.endsWith(".json")) setLanguage("json");
@@ -104,6 +110,8 @@ export default function Home() {
       <Toolbar
         language={language}
         onLanguageChange={setLanguage}
+        mode={mode}
+        onModeChange={setMode}
         onFormat={handleFormat}
         onCopy={handleCopy}
         onClear={handleClear}
@@ -119,6 +127,9 @@ export default function Home() {
           code={code}
           formattedCode={formattedCode}
           onChange={(val) => setCode(val || "")}
+          mode={mode}
+          secondaryCode={secondaryCode}
+          onSecondaryChange={(val) => setSecondaryCode(val || "")}
           options={{
             tabSize: settings.tabWidth,
             insertSpaces: !settings.useTabs,

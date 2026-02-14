@@ -9,6 +9,8 @@ export const LANGUAGES = [
 
 export type LanguageId = (typeof LANGUAGES)[number]["id"];
 
+export type Mode = "format" | "compare";
+
 export interface Settings {
     tabWidth: number;
     useTabs: boolean;
