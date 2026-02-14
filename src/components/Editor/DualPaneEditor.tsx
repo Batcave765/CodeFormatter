@@ -1,6 +1,6 @@
-import Editor, { OnMount } from "@monaco-editor/react";
-import { LanguageId } from "@/lib/constants";
-import { useRef, useEffect } from "react";
+import Editor, { DiffEditor, OnMount, DiffOnMount, useMonaco } from "@monaco-editor/react";
+import { LanguageId, Mode } from "@/lib/constants";
+import { useRef, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -9,6 +9,11 @@ interface DualPaneEditorProps {
     code: string;
     formattedCode: string;
     onChange: (value: string | undefined) => void;
+    // New props for Compare mode
+    mode?: Mode;
+    secondaryCode?: string;
+    onSecondaryChange?: (value: string | undefined) => void;
+
     options: any; // Monaco options
     error: string | null;
     onPaste?: () => void;
@@ -21,13 +26,101 @@ export function DualPaneEditor({
     code,
     formattedCode,
     onChange,
+    mode = "format",
+    secondaryCode = "",
+    onSecondaryChange,
     options,
     error,
     onPaste,
     onFormat,
     showPreview,
 }: DualPaneEditorProps) {
+
     const editorRef = useRef<any>(null);
+    const diffEditorRef = useRef<any>(null);
+    const monaco = useMonaco();
+
+    // Ref to track if the update originated from the editor itself
+    const isEditorChange = useRef(false);
+
+    // Disable linting in compare mode
+    useEffect(() => {
+        if (monaco) {
+            const isCompare = mode === "compare";
+            const m = monaco as any;
+
+            // JavaScript & TypeScript
+            m.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+                noSemanticValidation: isCompare,
+                noSyntaxValidation: isCompare,
+            });
+            m.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+                noSemanticValidation: isCompare,
+                noSyntaxValidation: isCompare,
+            });
+
+            // JSON
+            m.languages.json.jsonDefaults.setDiagnosticsOptions({
+                validate: !isCompare
+            });
+
+            // HTML
+            m.languages.html.htmlDefaults.setOptions({
+                validate: !isCompare,
+                format: {
+                    tabSize: 4,
+                    insertSpaces: true,
+                    wrapLineLength: 120,
+                    unformatted: 'default',
+                    contentUnformatted: 'pre,code,textarea',
+                    indentInnerHtml: false,
+                    preserveNewLines: true,
+                    maxPreserveNewLines: null,
+                    indentHandlebars: false,
+                    endWithNewline: false,
+                    extraLiners: 'head, body, /html',
+                    wrapAttributes: 'auto'
+                }
+            });
+
+            // CSS
+            m.languages.css.cssDefaults.setOptions({
+                validate: !isCompare
+            });
+        }
+    }, [monaco, mode]);
+
+    // Snapshot state to prevent re-renders on every keystroke passed to DiffEditor
+    const [codeSnapshot, setCodeSnapshot] = useState(code);
+    const [secondaryCodeSnapshot, setSecondaryCodeSnapshot] = useState(secondaryCode);
+
+    // Update snapshots when language or mode changes
+    useEffect(() => {
+        setCodeSnapshot(code);
+        setSecondaryCodeSnapshot(secondaryCode);
+    }, [language, mode]);
+
+    // Check for external updates (e.g. drag & drop, clear) and manually sync models
+    useEffect(() => {
+        if (diffEditorRef.current) {
+            // If this update was triggered by the editor itself, reset the flag and do nothing
+            if (isEditorChange.current) {
+                isEditorChange.current = false;
+                return;
+            }
+
+            const modifiedModel = diffEditorRef.current.getModifiedEditor().getModel();
+            const originalModel = diffEditorRef.current.getOriginalEditor().getModel();
+
+            if (modifiedModel && modifiedModel.getValue() !== code) {
+                modifiedModel.setValue(code);
+            }
+
+            if (originalModel && originalModel.getValue() !== secondaryCode) {
+                originalModel.setValue(secondaryCode);
+            }
+        }
+    }, [code, secondaryCode]);
 
     const handleEditorDidMount: OnMount = (editor, monaco) => {
         editorRef.current = editor;
@@ -39,8 +132,6 @@ export function DualPaneEditor({
             diagnosticCodesToIgnore: [], // Can add codes here to ignore
         });
 
-        // Ensure compiler options are strict enough to show "unused" warnings etc if possible?
-        // Default Monaco TS/JS setup usually shows unused variables as grayed out or warnings.
         monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
             allowNonTsExtensions: true,
             target: monaco.languages.typescript.ScriptTarget.ESNext,
@@ -58,6 +149,33 @@ export function DualPaneEditor({
                 onFormat();
             }
         });
+    };
+
+    const handleDiffEditorDidMount: DiffOnMount = (editor, monaco) => {
+        diffEditorRef.current = editor;
+
+        // Make sure both sides are editable handling is done via state updates if possible, 
+        // but Monaco DiffEditor 'original' model is often editable if we configure it right.
+        // We'll attach listeners to update our state.
+
+        const originalModel = editor.getOriginalEditor().getModel();
+        const modifiedModel = editor.getModifiedEditor().getModel();
+
+        if (originalModel) {
+            originalModel.onDidChangeContent(() => {
+                if (onSecondaryChange) {
+                    isEditorChange.current = true;
+                    onSecondaryChange(originalModel.getValue());
+                }
+            });
+        }
+
+        if (modifiedModel) {
+            modifiedModel.onDidChangeContent(() => {
+                isEditorChange.current = true;
+                onChange(modifiedModel.getValue());
+            });
+        }
     };
 
     // Map our language IDs to Monaco language IDs
@@ -85,6 +203,27 @@ export function DualPaneEditor({
         fontFamily: "var(--font-geist-mono), monospace",
         ...options,
     };
+
+    if (mode === "compare") {
+        return (
+            <div className="h-full w-full">
+                <DiffEditor
+                    key={language}
+                    height="100%"
+                    theme="vs-dark"
+                    language={monacoLanguage}
+                    original={secondaryCodeSnapshot}
+                    modified={codeSnapshot}
+                    onMount={handleDiffEditorDidMount}
+                    options={{
+                        ...commonOptions,
+                        originalEditable: true, // Allow editing the left side
+                        diffWordWrap: "off",
+                    }}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="flex-1 flex flex-col md:flex-row h-full overflow-hidden relative">
