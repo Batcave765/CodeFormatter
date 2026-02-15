@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "CodeFormatter",
   description: "Format your code with ease",
+  verification: {
+    google: "-hHgUIsMGUFLivTwps6fg7UsQNdgfE1R4dznqivyO5o",
+  },
 };
 
 export default function RootLayout({
