@@ -5,6 +5,8 @@ export const LANGUAGES = [
     { id: "json", name: "JSON", extensions: [".json"] },
     { id: "markdown", name: "Markdown", extensions: [".md"] },
     { id: "sql", name: "SQL", extensions: [".sql"] },
+    { id: "xml", name: "XML", extensions: [".xml"] },
+
 ] as const;
 
 export type LanguageId = (typeof LANGUAGES)[number]["id"];

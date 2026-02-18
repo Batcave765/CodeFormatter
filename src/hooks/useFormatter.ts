@@ -5,6 +5,7 @@ import * as parserHtml from "prettier/plugins/html";
 import * as parserPostcss from "prettier/plugins/postcss";
 import * as parserMarkdown from "prettier/plugins/markdown";
 import * as parserEstree from "prettier/plugins/estree";
+import parserXml from "@prettier/plugin-xml";
 import { format as formatSql } from "sql-formatter";
 import { LanguageId } from "@/lib/constants";
 
@@ -69,6 +70,10 @@ export function useFormatter() {
                     case "markdown":
                         parser = "markdown";
                         plugins = [parserMarkdown];
+                        break;
+                    case "xml":
+                        parser = "xml";
+                        plugins = [parserXml];
                         break;
                     default:
                         parser = "babel";

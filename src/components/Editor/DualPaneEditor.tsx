@@ -43,6 +43,20 @@ export function DualPaneEditor({
     // Ref to track if the update originated from the editor itself
     const isEditorChange = useRef(false);
 
+    // Ref to track manually created models for proper disposal
+    const manualModelsRef = useRef<{ original: any, modified: any } | null>(null);
+
+    // Cleanup models on unmount
+    useEffect(() => {
+        return () => {
+            if (manualModelsRef.current) {
+                manualModelsRef.current.original.dispose();
+                manualModelsRef.current.modified.dispose();
+                manualModelsRef.current = null;
+            }
+        };
+    }, []);
+
     // Disable linting in compare mode
     useEffect(() => {
         if (monaco) {
@@ -100,9 +114,16 @@ export function DualPaneEditor({
         setSecondaryCodeSnapshot(secondaryCode);
     }, [language, mode]);
 
+    // Clear diffEditorRef when not in compare mode to avoid stale reference errors
+    useEffect(() => {
+        if (mode !== "compare") {
+            diffEditorRef.current = null;
+        }
+    }, [mode]);
+
     // Check for external updates (e.g. drag & drop, clear) and manually sync models
     useEffect(() => {
-        if (diffEditorRef.current) {
+        if (mode === "compare" && diffEditorRef.current) {
             // If this update was triggered by the editor itself, reset the flag and do nothing
             if (isEditorChange.current) {
                 isEditorChange.current = false;
@@ -120,7 +141,7 @@ export function DualPaneEditor({
                 originalModel.setValue(secondaryCode);
             }
         }
-    }, [code, secondaryCode]);
+    }, [code, secondaryCode, mode]);
 
     const handleEditorDidMount: OnMount = (editor, monaco) => {
         editorRef.current = editor;
@@ -154,28 +175,31 @@ export function DualPaneEditor({
     const handleDiffEditorDidMount: DiffOnMount = (editor, monaco) => {
         diffEditorRef.current = editor;
 
-        // Make sure both sides are editable handling is done via state updates if possible, 
-        // but Monaco DiffEditor 'original' model is often editable if we configure it right.
-        // We'll attach listeners to update our state.
-
-        const originalModel = editor.getOriginalEditor().getModel();
-        const modifiedModel = editor.getModifiedEditor().getModel();
-
-        if (originalModel) {
-            originalModel.onDidChangeContent(() => {
-                if (onSecondaryChange) {
-                    isEditorChange.current = true;
-                    onSecondaryChange(originalModel.getValue());
-                }
-            });
+        // Manually create models to control lifecycle and prevent disposal errors
+        // Dispose previous models if any
+        if (manualModelsRef.current) {
+            manualModelsRef.current.original.dispose();
+            manualModelsRef.current.modified.dispose();
         }
 
-        if (modifiedModel) {
-            modifiedModel.onDidChangeContent(() => {
+        const originalModel = monaco.editor.createModel(secondaryCodeSnapshot, monacoLanguage);
+        const modifiedModel = monaco.editor.createModel(codeSnapshot, monacoLanguage);
+
+        manualModelsRef.current = { original: originalModel, modified: modifiedModel };
+        editor.setModel({ original: originalModel, modified: modifiedModel });
+
+        // Attach listeners
+        originalModel.onDidChangeContent(() => {
+            if (onSecondaryChange) {
                 isEditorChange.current = true;
-                onChange(modifiedModel.getValue());
-            });
-        }
+                onSecondaryChange(originalModel.getValue());
+            }
+        });
+
+        modifiedModel.onDidChangeContent(() => {
+            isEditorChange.current = true;
+            onChange(modifiedModel.getValue());
+        });
     };
 
     // Map our language IDs to Monaco language IDs
@@ -187,6 +211,7 @@ export function DualPaneEditor({
             case "json": return "json";
             case "markdown": return "markdown";
             case "sql": return "sql";
+            case "xml": return "xml";
             default: return "plaintext";
         }
     };
@@ -208,12 +233,10 @@ export function DualPaneEditor({
         return (
             <div className="h-full w-full">
                 <DiffEditor
-                    key={language}
+
                     height="100%"
                     theme="vs-dark"
                     language={monacoLanguage}
-                    original={secondaryCodeSnapshot}
-                    modified={codeSnapshot}
                     onMount={handleDiffEditorDidMount}
                     options={{
                         ...commonOptions,
